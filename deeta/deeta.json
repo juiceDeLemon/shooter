@@ -1,0 +1,53 @@
+{
+    "enemies": {
+        "asteroid": {
+            "health": 20,
+            "damage": 2,
+            "speed": 5,
+            "cool_down": 1.5,
+            "range": 0
+        },
+        "fast": {
+            "health": 12,
+            "damage": 1,
+            "speed": 7,
+            "cool_down": 1.2,
+            "range": 0
+        },
+        "comet": {
+            "health": 10,
+            "damage": 20,
+            "speed": 7.5,
+            "cool_down": null,
+            "range": 0,
+            "method": "once"
+        },
+        "sniper": {
+            "health": 7,
+            "damage": 2.5,
+            "speed": 0.2,
+            "cool_down": 1.75,
+            "range": 9,
+            "method": "continuous"
+        }
+    },
+    "player": {
+        "basic": {
+            "health": 60,
+            "damage": 2.5,
+            "speed": 2,
+            "bullet_speed": 25,
+            "cool_down": 0.2,
+            "range": 17,
+            "max_ammo": 40
+        },
+        "laser": {
+            "health": 60,
+            "damage": 100,
+            "speed": 1,
+            "range": 17,
+            "cool_down": 20,
+            "max_ammo": 1
+        }
+    }
+}
