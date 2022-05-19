@@ -51,7 +51,7 @@ class Player(pyg.sprite.Sprite):
 
     def rotation(self):
         """
-        Make player rotate towards mouse. 
+        Make player rotate towards mouse.
         Bullet also shoot in this direction, but uses a different function
         (same mechanism).
         """
@@ -65,13 +65,10 @@ class Player(pyg.sprite.Sprite):
         self.rotation()
 
 
-class Bullet:
-    """
-    I have no idea how this works because I stole this in stackoverflow. 
-    """
+class Bullets(pyg.sprite.Sprite):
 
     def __init__(self, x, y):
-        self.pos = (x, y)
+        super().__init__()
         mouse_x, mouse_y = pyg.mouse.get_pos()
         self.dir = (mouse_x - x, mouse_y - y)
         length = math.hypot(*self.dir)
@@ -79,21 +76,21 @@ class Bullet:
             self.dir = (0, -1)
         else:
             self.dir = (self.dir[0]/length, self.dir[1]/length)
-        angle = math.degrees(math.atan2(-self.dir[1], self.dir[0]))
-
+        self.angle = math.atan2(-self.dir[1], self.dir[0])
         self.image = pyg.image.load(
             "graphics/bullets/gun_bullet.png").convert_alpha()
-        self.image = pyg.transform.rotate(self.image, angle)
+        self.image = pyg.transform.rotate(self.image, math.degrees(self.angle))
+        self.rect = self.image.get_rect(center=(x, y))
         self.speed = 25
         self.mask = pyg.mask.from_surface(self.image)
 
-    def draw(self, screen):
-        bullet_rect = self.image.get_rect(center=self.pos)
-        screen.blit(self.image, bullet_rect)
+    def movement(self):
+        angle = math.atan2(self.dir[1], self.dir[0])
+        self.rect.x += math.cos(angle)*self.speed
+        self.rect.y += math.sin(angle)*self.speed
 
     def update(self):
-        self.pos = (self.pos[0]+self.dir[0]*self.speed,
-                    self.pos[1]+self.dir[1]*self.speed)
+        self.movement()
 
 
 class GunParticle(pyg.sprite.Sprite):
@@ -139,7 +136,7 @@ class Enemies(pyg.sprite.Sprite):
         self.spin = 0
 
         """
-        Using self.seat that is randomly chosen earlier, 
+        Using self.seat that is randomly chosen earlier,
         each case have different positions to choose from.
         Different positions have different chances to enhance hit rate.
         """
@@ -239,25 +236,25 @@ class Cursor(pyg.sprite.Sprite):
 
 
 # sprites
-player = Player()
 player_group = pyg.sprite.GroupSingle()
-player_group.add(player)
-bullets = []
+player_group.add(Player())
+
+bullets_group = pyg.sprite.Group()
 enemies_group = pyg.sprite.Group()
+
 cursor_group = pyg.sprite.GroupSingle()
 cursor_group.add(Cursor("graphics/cursors/cross.png"))
-# - gun_particle_group = pyg.sprite.Group()
 
-# technical
+# other
 timer = 0
 spawn_frequency = 45
 spawn_enemy = pyg.event.Event(pyg.USEREVENT + 0)
 
 while True:
     screen.blit(background_surf, (0, 0))
-    pos = player.movement()
+    player_x, player_y = Player().movement()
 
-    # enemy spawning?!
+    # enemy spawning
     timer += 1
     if timer % 45 == 0:
         pyg.event.post(spawn_enemy)
@@ -269,8 +266,8 @@ while True:
             exit()
 
         if event.type == pyg.KEYDOWN:
-            if event.key == pyg.K_SPACE:
-                bullets.append(Bullet(*pos))
+            if event.key == pyg.K_SPACE:  # shoot bullet
+                bullets_group.add(Bullets(player_x, player_y))
                 # GunParticle().add()
 
         if event.type == pyg.USEREVENT + 0:
@@ -282,13 +279,8 @@ while True:
     player_group.draw(screen)
     player_group.update()
 
-    for bullet in bullets:
-        bullet.update()
-        if not screen.get_rect().collidepoint(bullet.pos):
-            bullets.remove(bullet)
-
-    for bullet in bullets:
-        bullet.draw(screen)
+    bullets_group.draw(screen)
+    bullets_group.update()
 
     enemies_group.draw(screen)
     enemies_group.update()
