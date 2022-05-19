@@ -1,3 +1,4 @@
+import collections
 import pygame as pyg
 import math
 import random
@@ -130,6 +131,7 @@ class Enemies(pyg.sprite.Sprite):
             "graphics/enemies/asteroid/asteroid.png").convert_alpha()
         self.orig_img = self.image
         self.mask = pyg.mask.from_surface(self.image)
+        self.mask.fill()
         self.seat = random.choices(
             (range(1, 13)), weights=(1, 3, 3, 1, 3, 3, 1, 3, 3, 1, 3, 3))[0]
         self.SPIN_ANGLE = 2
@@ -203,13 +205,9 @@ class Enemies(pyg.sprite.Sprite):
 
     def spin_enemy(self):
         """
-        This is bouncy meatball with fix.
+        This is bouncy meatball with fix. (Well, at least not yet)
         """
         self.bouncy_meetball()
-
-    def collision(self, object, pierce):
-        """This is pixel perfect collision. """
-        pyg.sprite.spritecollide()
 
     def delete(self):
         """
@@ -253,6 +251,12 @@ spawn_enemy = pyg.event.Event(pyg.USEREVENT + 0)
 while True:
     screen.blit(background_surf, (0, 0))
     player_x, player_y = Player().movement()
+
+    # collision
+    for enemies in enemies_group:
+        if pyg.sprite.spritecollide(
+                enemies, bullets_group, True, pyg.sprite.collide_mask):
+            Enemies().delete()
 
     # enemy spawning
     timer += 1
