@@ -1,4 +1,5 @@
 import collections
+from os import kill
 import pygame as pyg
 import math
 import random
@@ -14,6 +15,14 @@ screen = pyg.display.set_mode((SCN_W, SCN_H))
 clock = pyg.time.Clock()
 background_surf = pyg.image.load("graphics/background.png").convert_alpha()
 pyg.mouse.set_visible(False)
+
+
+def collision(group, kill, self):
+    for enemy in enemies_group:
+        if pyg.sprite.spritecollide(
+                enemy, group, kill, pyg.sprite.collide_mask):
+            if self:
+                enemy.kill()
 
 
 class Player(pyg.sprite.Sprite):
@@ -246,22 +255,24 @@ cursor_group.add(Cursor("graphics/cursors/cross.png"))
 # other
 timer = 0
 spawn_frequency = 45
-spawn_enemy = pyg.event.Event(pyg.USEREVENT + 0)
+SPAWN_ENEMY = pyg.event.Event(pyg.USEREVENT + 0)
+
+# group, self is destroyed?, asteroid is destroyedL
+TO_BE_COLLIDE_DETECTED = [(bullets_group, True, True),
+                          (player_group, False, False)]
 
 while True:
     screen.blit(background_surf, (0, 0))
     player_x, player_y = Player().movement()
 
     # collision
-    for enemies in enemies_group:
-        if pyg.sprite.spritecollide(
-                enemies, bullets_group, True, pyg.sprite.collide_mask):
-            Enemies().delete()
+    for group, self, enemy in TO_BE_COLLIDE_DETECTED:
+        collision(group, self, enemy)
 
     # enemy spawning
     timer += 1
     if timer % 45 == 0:
-        pyg.event.post(spawn_enemy)
+        pyg.event.post(SPAWN_ENEMY)
         spawn_frequency = random.randint(35, 50)
 
     for event in pyg.event.get():
