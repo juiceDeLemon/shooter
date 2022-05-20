@@ -146,7 +146,7 @@ class Enemies(pyg.sprite.Sprite):
         self.orig_img = self.image
         self.mask = pyg.mask.from_surface(self.image)
         self.mask.fill()
-        self.seat = random.choices(
+        self.spawn_pt = random.choices(
             (range(1, 13)), weights=(1, 3, 3, 1, 3, 3, 1, 3, 3, 1, 3, 3))[0]
         self.SPIN_ANGLE = 2
         self.spin = 0
@@ -156,7 +156,7 @@ class Enemies(pyg.sprite.Sprite):
         each case have different positions to choose from.
         Different positions have different chances to enhance hit rate.
         """
-        match self.seat:
+        match self.spawn_pt:
             case 1:
                 self.dir = 315
                 self.rect = self.image.get_rect(bottomright=(0, 0))
