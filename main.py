@@ -1,5 +1,3 @@
-import collections
-from os import kill
 import pygame as pyg
 import math
 import random
@@ -46,7 +44,8 @@ class Player(pyg.sprite.Sprite):
 
     def movement(self):
         """
-        Player is moved when key pressed.
+        Player is moved when specific key is pressed.
+        This function also return the player's current position.
         """
         keys = pyg.key.get_pressed()
         if keys[pyg.K_w]:
@@ -76,9 +75,11 @@ class Player(pyg.sprite.Sprite):
 
 
 class Bullets(pyg.sprite.Sprite):
-
     def __init__(self, x, y):
         super().__init__()
+        with open("deeta/deeta.json", "r") as f:
+            data = json.load(f)
+
         mouse_x, mouse_y = pyg.mouse.get_pos()
         self.dir = (mouse_x - x, mouse_y - y)
         length = math.hypot(*self.dir)
@@ -91,10 +92,14 @@ class Bullets(pyg.sprite.Sprite):
             "graphics/bullets/gun_bullet.png").convert_alpha()
         self.image = pyg.transform.rotate(self.image, math.degrees(self.angle))
         self.rect = self.image.get_rect(center=(x, y))
-        self.speed = 25
+        self.speed = data["player"]["basic"]["bullet_speed"]
         self.mask = pyg.mask.from_surface(self.image)
 
     def movement(self):
+        """
+        Move self.speed tiles in the direction self.dir per frame.
+        Speed is defined in deeta.json and direction is chose in def __init__.
+        """
         angle = math.atan2(self.dir[1], self.dir[0])
         self.rect.x += math.cos(angle)*self.speed
         self.rect.y += math.sin(angle)*self.speed
@@ -243,6 +248,7 @@ class Cursor(pyg.sprite.Sprite):
 
 
 # sprites
+player = Player()
 player_group = pyg.sprite.GroupSingle()
 player_group.add(Player())
 
@@ -263,7 +269,7 @@ TO_BE_COLLIDE_DETECTED = [(bullets_group, True, True),
 
 while True:
     screen.blit(background_surf, (0, 0))
-    player_x, player_y = Player().movement()
+    player_x, player_y = player.movement()
 
     # collision
     for group, self, enemy in TO_BE_COLLIDE_DETECTED:
@@ -282,7 +288,8 @@ while True:
 
         if event.type == pyg.KEYDOWN:
             if event.key == pyg.K_SPACE:  # shoot bullet
-                bullets_group.add(Bullets(player_x, player_y))
+                bullets_group.add(
+                    Bullets(player_x, player_y))
                 # GunParticle().add()
 
         if event.type == pyg.USEREVENT + 0:
