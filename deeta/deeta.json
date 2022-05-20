@@ -45,6 +45,7 @@
             "health": 60,
             "damage": 100,
             "speed": 1,
+            "bullet_speed": 0,
             "range": 17,
             "cool_down": 20,
             "max_ammo": 1
