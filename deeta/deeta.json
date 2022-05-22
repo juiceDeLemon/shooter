@@ -35,7 +35,7 @@
         "basic": {
             "health": 60,
             "damage": 2.5,
-            "speed": 2,
+            "speed": 1.5,
             "bullet_speed": 25,
             "cool_down": 0.2,
             "range": 17,

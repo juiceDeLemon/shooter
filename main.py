@@ -4,9 +4,7 @@ import random
 import json
 from sys import exit
 
-# todo: fix bouncy meatball
-
-SCN_W, SCN_H = 1200, 900  # screen width and height
+SCN_W, SCN_H = 1200, 900  # screen width and screen height
 
 pyg.init()
 screen = pyg.display.set_mode((SCN_W, SCN_H))
@@ -15,12 +13,22 @@ background_surf = pyg.image.load("graphics/background.png").convert_alpha()
 pyg.mouse.set_visible(False)
 
 
-def collision(group, kill, self):
+def meat_ball_fix(func):
+    def wrapper():
+        func()
+    return wrapper
+
+
+def collision(group, kill, self, bounce):
     for enemy in enemies_group:
-        if pyg.sprite.spritecollide(
-                enemy, group, kill, pyg.sprite.collide_mask):
-            if self:
-                enemy.kill()
+        for thing in group:
+            if pyg.sprite.collide_mask(thing, enemy):
+                if pyg.sprite.spritecollide(
+                        enemy, group, kill):
+                    if self:
+                        enemies.delete()
+                    if bounce:
+                        pyg.event.post(BOUNCE)
 
 
 class Player(pyg.sprite.Sprite):
@@ -34,36 +42,30 @@ class Player(pyg.sprite.Sprite):
         self.rect = self.image.get_rect(  # spawn in the centre of the screen
             center=(SCN_W/2, SCN_H/2))
         self.pos = pyg.math.Vector2(SCN_W/2, SCN_H/2)
-
         self.type = "basic"
-
+        self.mask = pyg.mask.from_surface(self.image)
         self.health = data["player"][self.type]["health"]
         self.speed = data["player"][self.type]["speed"]
         self.max_ammo = data["player"][self.type]["max_ammo"]
         self.cool_down = data["player"][self.type]["cool_down"]
 
     def movement(self):
-        """
-        Player is moved when specific key is pressed.
-        This function also return the player's current position.
-        """
         keys = pyg.key.get_pressed()
         if keys[pyg.K_w]:
-            self.rect.y -= self.speed
+            if self.rect.midtop[1] >= 0:
+                self.rect.y -= self.speed
         elif keys[pyg.K_a]:
-            self.rect.x -= self.speed
+            if self.rect.midleft[0] >= 0:
+                self.rect.x -= self.speed
         elif keys[pyg.K_s]:
-            self.rect.y += self.speed
+            if self.rect.midbottom[1] <= SCN_H:
+                self.rect.y += self.speed
         elif keys[pyg.K_d]:
-            self.rect.x += self.speed
+            if self.rect.midright[0] <= SCN_W:
+                self.rect.x += self.speed
         return self.rect.centerx, self.rect.centery
 
     def rotation(self):
-        """
-        Make player rotate towards mouse.
-        Bullet also shoot in this direction, but uses a different function
-        (same mechanism).
-        """
         _, angle = (pyg.mouse.get_pos()-self.pos).as_polar()
         self.image = pyg.transform.rotozoom(self.orig_img, -angle-90, 1)
         self.rect = self.image.get_rect(center=self.rect.center)
@@ -96,10 +98,6 @@ class Bullets(pyg.sprite.Sprite):
         self.mask = pyg.mask.from_surface(self.image)
 
     def movement(self):
-        """
-        Move self.speed tiles in the direction self.dir per frame.
-        Speed is defined in deeta.json and direction is chose in def __init__.
-        """
         angle = math.atan2(self.dir[1], self.dir[0])
         self.rect.x += math.cos(angle)*self.speed
         self.rect.y += math.sin(angle)*self.speed
@@ -151,11 +149,6 @@ class Enemies(pyg.sprite.Sprite):
         self.SPIN_ANGLE = 2
         self.spin = 0
 
-        """
-        Using self.seat that is randomly chosen earlier,
-        each case have different positions to choose from.
-        Different positions have different chances to enhance hit rate.
-        """
         match self.spawn_pt:
             case 1:
                 self.dir = 315
@@ -200,33 +193,26 @@ class Enemies(pyg.sprite.Sprite):
 
         self.dir += random.randint(-35, 35)
         self.speed = data["enemies"]["asteroid"]["speed"]
+        self.speed += random.uniform(-0.7, 0.7)
 
     def movement(self):
-        """
-        Move self.speed tiles in the direction self.dir per frame.
-        Speed is defined in deeta.json and direction is chose in def __init__.
-        """
         self.rect.x += math.cos(math.radians(self.dir))*self.speed
         self.rect.y -= math.sin(math.radians(self.dir))*self.speed
 
-    def bouncy_meetball(self):  # pointless extra code but it's god damn funny
-        """
-        Pointless code that slows down the code but this is god damn funny.
-        """
+    def bounce(self):
+        self.speed *= -1
+
+    def bouncy_meetball(self):  # pointless code but funny
         self.image = pyg.transform.rotozoom(self.orig_img, self.spin, 1)
         self.spin += self.SPIN_ANGLE
         self.spin = 0 if self.spin == 360 else self.spin
 
+    @meat_ball_fix
     def spin_enemy(self):
-        """
-        This is bouncy meatball with fix. (Well, at least not yet)
-        """
         self.bouncy_meetball()
 
     def delete(self):
-        """
-        Deletes enemies that when whatever reason.
-        """
+        self.remove()
         self.kill()
 
     def update(self):
@@ -250,9 +236,10 @@ class Cursor(pyg.sprite.Sprite):
 # sprites
 player = Player()
 player_group = pyg.sprite.GroupSingle()
-player_group.add(Player())
-
+player_group.add(player)
 bullets_group = pyg.sprite.Group()
+
+enemies = Enemies()
 enemies_group = pyg.sprite.Group()
 
 cursor_group = pyg.sprite.GroupSingle()
@@ -260,26 +247,30 @@ cursor_group.add(Cursor("graphics/cursors/cross.png"))
 
 # other
 timer = 0
-spawn_frequency = 45
+spawn_rate = 40
 SPAWN_ENEMY = pyg.event.Event(pyg.USEREVENT + 0)
+BOUNCE = pyg.event.Event(pyg.USEREVENT + 1)
 
-# group, self is destroyed?, asteroid is destroyedL
-TO_BE_COLLIDE_DETECTED = [(bullets_group, True, True),
-                          (player_group, False, False)]
+# group, self is destroyed?, asteroid is destroyed?, asteroid bounce?
+TO_BE_COLLIDE_DETECTED = [
+    (bullets_group, True, True, False),
+    (player_group, False, False, True),
+    (enemies_group, False, False, True)
+]
 
 while True:
     screen.blit(background_surf, (0, 0))
     player_x, player_y = player.movement()
 
     # collision
-    for group, self, enemy in TO_BE_COLLIDE_DETECTED:
-        collision(group, self, enemy)
+    for group, self, enemy, bounce in TO_BE_COLLIDE_DETECTED:
+        collision(group, self, enemy, bounce)
 
     # enemy spawning
     timer += 1
-    if timer % 45 == 0:
+    if timer % spawn_rate == 0:
         pyg.event.post(SPAWN_ENEMY)
-        spawn_frequency = random.randint(35, 50)
+        spawn_rate = random.randint(35, 50)
 
     for event in pyg.event.get():
         if event.type == pyg.QUIT:
@@ -293,7 +284,10 @@ while True:
                 # GunParticle().add()
 
         if event.type == pyg.USEREVENT + 0:
-            enemies_group.add(Enemies())
+            enemies_group.add(enemies)
+
+        if event.type == pyg.USEREVENT + 1:
+            enemies.bounce()
 
     cursor_group.draw(screen)
     cursor_group.update()
