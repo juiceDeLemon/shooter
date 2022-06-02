@@ -1,2 +1,0 @@
-Get the sprites from the group, and compare each to the "self" sprite,
-and only those who are not "self" sprite will be considered in the collision list.
