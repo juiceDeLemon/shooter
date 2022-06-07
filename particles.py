@@ -1,15 +1,15 @@
 import math
 import pygame as pyg
-import random
+from random import randint, uniform
 
 
-class GunShotParticle:
-    def __init__(self, max_rad, pos, width, decay_speed, fill_time, screen):
+class GunShot:
+    def __init__(self, pos, screen):
         self.pos = pos
-        self.max_rad = self.radius = max_rad
-        self.width = width
-        self.decay_speed = decay_speed
-        self.fill_time = fill_time
+        self.max_rad = self.radius = 20
+        self.width = 2
+        self.decay_speed = 1.5
+        self.fill_time = 1.7
         self.screen = screen
 
     def change_size(self):
@@ -29,18 +29,18 @@ class GunShotParticle:
         self.draw()
 
 
-class ScoreParticle(pyg.sprite.Sprite):
+class Score(pyg.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = pyg.image.load(
-            "graphics/particles/score_particle.png").convert_alpha()
+            "graphics/particles/score.png").convert_alpha()
         self.image = pyg.transform.rotozoom(
-            self.image, 0, random.uniform(1, 1.5))
+            self.image, 0, uniform(1, 1.5))
         self.rect = self.image.get_rect(
-            center=(random.randint(0, 20) + x, random.randint(0, 20) + y))
-        self.dir = random.randint(-180, 180)
-        self.speed = random.randint(4, 8)
-        self.alpha = random.randint(180, 230)
+            center=(randint(0, 20) + x, randint(0, 20) + y))
+        self.dir = randint(-180, 180)
+        self.speed = randint(4, 8)
+        self.alpha = randint(180, 230)
         self.image.set_alpha(self.alpha)
 
     def add(self):

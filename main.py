@@ -1,8 +1,11 @@
 import pygame as pyg
 import math
 import random
-import json
+import particles
+import buttons
+import ui
 import deeta.settings as settings
+from json import load
 from sys import exit
 
 
@@ -29,19 +32,24 @@ class Player(pyg.sprite.Sprite):
     def __init__(self):
         super().__init__()
         with open("deeta/deeta.json", "r") as f:
-            data = json.load(f)
+            data = load(f)
 
-        self.image = pyg.image.load("graphics/player/gun.png").convert_alpha()
-        self.orig_img = self.image
-        self.rect = self.image.get_rect(  # spawn in the centre of the screen
+        self.image = self.orig_img = pyg.image.load(
+            "graphics/player/gun.png").convert_alpha()
+        self.rect = self.image.get_rect(  # spawn at the centre of the screen
             center=(settings.WIDTH/2, settings.HEIGHT/2))
         self.pos = pyg.math.Vector2(settings.WIDTH/2, settings.HEIGHT/2)
 
         self.type = "basic"
-        self.health = data["player"][self.type]["health"]
+        self.health = self.max_health = self.ani_health = data["player"][self.type]["health"]
         self.speed = data["player"][self.type]["speed"]
         self.max_ammo = data["player"][self.type]["max_ammo"]
         self.cool_down = data["player"][self.type]["cool_down"]
+
+        self.max_health_to_health_bar_max_length_ratio = self.max_health / 400
+        self.heart_img = pyg.image.load(
+            "graphics/ui/health_bar/heart.png").convert_alpha()
+        self.heart_rect = self.heart_img.get_rect(topleft=(10, 10))
 
     def movement(self):
         keys = pyg.key.get_pressed()
@@ -57,26 +65,69 @@ class Player(pyg.sprite.Sprite):
         elif keys[pyg.K_d]:
             if self.rect.midright[0] <= settings.WIDTH:
                 self.rect.x += self.speed
+
         _, angle = (pyg.mouse.get_pos()-self.pos).as_polar()
+        # picture rotated 90°
         self.image = pyg.transform.rotate(self.orig_img, -angle-90)
         self.rect = self.image.get_rect(center=self.rect.center)
 
-    def die(self):
+    def die_test(self):
         if self.health <= 0:
-            print("You died")
             pyg.event.post(pyg.event.Event(pyg.QUIT))
 
+    def health_bar(self):
+        ani_width = 0
+
+        # 1 is transition speed
+        if not self.ani_health == self.health:
+            if self.ani_health < self.health - 1:
+                self.ani_health += 1
+            elif self.ani_health > self.health + 1:
+                self.ani_health -= 1
+            else:
+                self.ani_health = self.health
+            ani_width = (self.health - self.ani_health) / \
+                self.max_health_to_health_bar_max_length_ratio
+
+        # x = 70, y = 25 is the offset from the top left corner of the screen
+        # 54, 400 is the height and the max length of the health bar
+
+        # bar rect
+        bar_rect = pyg.Rect(
+            70, 25, int(self.ani_health / self.max_health_to_health_bar_max_length_ratio), 54)
+        # animation bar
+        ani_bar_rect = pyg.Rect(bar_rect.right, 70, ani_width, 54)
+        pyg.draw.rect(screen, "#646464", ani_bar_rect)
+        # bar
+        pyg.draw.rect(screen, "#dddddd", bar_rect, 0, 12)
+        # bar shade
+        # 25+54-20 = offset + (height - shade height)
+        pyg.draw.rect(screen, "#afafaf", pyg.Rect(
+            70, 25+54-20, self.health / self.max_health_to_health_bar_max_length_ratio, 20),
+            0, border_bottom_left_radius=12, border_bottom_right_radius=12)
+        # frame
+        pyg.draw.rect(screen, "#ffffff", pyg.Rect(
+            70, 25, 400, 54), 5, border_top_right_radius=12, border_bottom_right_radius=12)
+        # heart
+        screen.blit(self.heart_img, self.heart_rect)
+
     def update(self):
-        self.die()
+        self.die_test()
         self.pos = pyg.Vector2(self.rect.centerx, self.rect.centery)
         self.movement()
+        self.health_bar()
 
 
 class Bullets(pyg.sprite.Sprite):
+    """
+    I have no idea what this does. 
+    Don't ask me where did I got this.
+    It probably starts with "S" and ends with "W".
+    """
     def __init__(self, x, y):
         super().__init__()
         with open("deeta/deeta.json", "r") as f:
-            data = json.load(f)
+            data = load(f)
 
         mouse_x, mouse_y = pyg.mouse.get_pos()
         self.dir = (mouse_x - x, mouse_y - y)
@@ -85,7 +136,7 @@ class Bullets(pyg.sprite.Sprite):
             0, -1) if length == 0.0 else (self.dir[0]/length, self.dir[1]/length)
         self.angle = math.atan2(-self.dir[1], self.dir[0])
         self.image = pyg.image.load(
-            "graphics/bullets/gun_bullet.png").convert_alpha()
+            "graphics/bullets/gun.png").convert_alpha()
         self.image = pyg.transform.rotate(self.image, math.degrees(self.angle))
         self.rect = self.image.get_rect(center=(x, y))
 
@@ -105,7 +156,7 @@ class Enemies(pyg.sprite.Sprite):
     def __init__(self):
         super().__init__()
         with open("deeta/deeta.json", "r") as f:
-            data = json.load(f)
+            data = load(f)
 
         self.image = self.orig_img = pyg.image.load(
             "graphics/enemies/asteroid/asteroid.png").convert_alpha()
@@ -188,12 +239,14 @@ class Enemies(pyg.sprite.Sprite):
 
     def collision(self):
         # bullets (take damage)
-        for bullets in bullets_group:
-            if self.rect.colliderect(bullets.rect):
-                bullets.kill()
-                self.health -= bullets.damage
+        for bullet in bullets_group:
+            if self.rect.colliderect(bullet.rect):
+                bullet.kill()
+                gun_shot_particle_list.append(
+                    particles.GunShot((bullet.rect.x, bullet.rect.y), screen))
+                self.health -= bullet.damage
                 self.alpha_frame = 1
-                self.image.set_alpha(50)
+                # self.image.set_alpha(50)
 
         # player (deal damage)
         if self.rect.colliderect(player.rect):
@@ -223,46 +276,23 @@ class Enemies(pyg.sprite.Sprite):
         # self.flash()
 
 
-class PlayerHealth:
-    def __init__(self):
-        self.font = pyg.font.Font(settings.NORMAL_F, 75)
-        self.get_health()
-        self.rect = self.image.get_rect(center=(settings.WIDTH/2, 25))
-
-    def get_health(self):
-        current_health = f"{player.health}"
-        self.image = self.font.render(current_health, False, "white")
-
-    def update(self):
-        self.get_health()
-        screen.blit(self.image, self.rect)
-
-
-class Cursor(pyg.sprite.Sprite):
-    def __init__(self, cursor):
-        super().__init__()
-        self.image = pyg.image.load(cursor).convert_alpha()
-        self.rect = self.image.get_rect()
-
-    def move(self):
-        self.rect.x, self.rect.y = pyg.mouse.get_pos()
-
-    def update(self):
-        self.move()
-
-
 # sprites:
 # player
 player = Player()
 player_group = pyg.sprite.GroupSingle()
 player_group.add(player)
+
 bullets_group = pyg.sprite.Group()
 # enemies
 enemies_group = pyg.sprite.Group()
+# particles
+gun_shot_particle_list = []
 # cursor
 cursor_group = pyg.sprite.GroupSingle()
-cursor_group.add(Cursor("graphics/cursors/cross.png"))
-
+cursor_group.add(ui.Cursor("graphics/ui/cursors/cross.png"))
+# buttons:
+# quit button
+quit_button = buttons.QuitButton(screen)
 # others
 enemy_spawn_timer = 0
 spawn_rate = 40
@@ -288,21 +318,35 @@ while True:
             if event.key == pyg.K_SPACE:  # shoot bullet
                 bullets_group.add(
                     Bullets(player.rect.centerx, player.rect.centery))
+            elif event.key == pyg.K_ESCAPE:
+                player.health += 17
+
+        if event.type == pyg.MOUSEBUTTONDOWN:
+            # quit button
+            if quit_button.rect.collidepoint(event.pos):
+                quit_button.image.set_alpha(100)
+                if event.button == 1:
+                    quit_button()
 
     # draw and update groups/classes
-    cursor_group.draw(screen)
-    cursor_group.update()
-
-    player_group.draw(screen)
-    player_group.update()
-
     bullets_group.draw(screen)
     bullets_group.update()
 
     enemies_group.draw(screen)
     enemies_group.update()
 
-    PlayerHealth().update()
+    for particle in gun_shot_particle_list:
+        particle.update()
+        if particle.radius <= 0:
+            gun_shot_particle_list.remove(particle)
+
+    quit_button.update()
+
+    player_group.draw(screen)
+    player_group.update()
+
+    cursor_group.draw(screen)
+    cursor_group.update()
 
     pyg.display.flip()
     clock.tick(fps)
