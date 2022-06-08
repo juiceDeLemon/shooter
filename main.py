@@ -3,7 +3,7 @@ import math
 import random
 import particles
 import buttons
-import ui
+import otherui
 import deeta.settings as settings
 from json import load
 from sys import exit
@@ -124,6 +124,7 @@ class Bullets(pyg.sprite.Sprite):
     Don't ask me where did I got this.
     It probably starts with "S" and ends with "W".
     """
+    
     def __init__(self, x, y):
         super().__init__()
         with open("deeta/deeta.json", "r") as f:
@@ -289,7 +290,7 @@ enemies_group = pyg.sprite.Group()
 gun_shot_particle_list = []
 # cursor
 cursor_group = pyg.sprite.GroupSingle()
-cursor_group.add(ui.Cursor("graphics/ui/cursors/cross.png"))
+cursor_group.add(otherui.Cursor("graphics/ui/cursors/cross.png"))
 # buttons:
 # quit button
 quit_button = buttons.QuitButton(screen)
