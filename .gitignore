@@ -4,5 +4,6 @@
 *test_3.py
 *test_4.py
 *test_5.py
+*.DS_Store
 /.vscode/*
 /__pycache__/*
