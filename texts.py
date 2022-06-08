@@ -15,11 +15,11 @@ class Score(pyg.sprite.Sprite):
         self.current_size *= 1.2
 
     def update(self):
-        import test_3
+        import main
         self.font = pyg.font.Font(
             f"{settings.NORMAL_F}", int(self.current_size))
         self.image = self.font.render(
-            f"{int(test_3.score)}", True, "White")
+            f"{int(main.score)}", True, "White")
         self.current_size += 0.2*(self.max_size-self.current_size)
 
 

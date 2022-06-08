@@ -1,10 +1,13 @@
 import pygame as pyg
 import math
 import random
+# --------------------------------------------------
 import particles
 import buttons
 import otherui
+import texts
 import deeta.settings as settings
+# --------------------------------------------------
 from json import load
 from sys import exit
 
@@ -92,6 +95,8 @@ class Player(pyg.sprite.Sprite):
         # x = 70, y = 25 is the offset from the top left corner of the screen
         # 54, 400 is the height and the max length of the health bar
 
+        # background
+        pyg.draw.rect(screen, bg_colour, pyg.Rect(70, 25, 400, 54))
         # bar rect
         bar_rect = pyg.Rect(
             70, 25, int(self.ani_health / self.max_health_to_health_bar_max_length_ratio), 54)
@@ -124,7 +129,7 @@ class Bullets(pyg.sprite.Sprite):
     Don't ask me where did I got this.
     It probably starts with "S" and ends with "W".
     """
-    
+
     def __init__(self, x, y):
         super().__init__()
         with open("deeta/deeta.json", "r") as f:
@@ -232,16 +237,22 @@ class Enemies(pyg.sprite.Sprite):
         self.rect.y -= self.speed * math.sin(math.radians(self.dir))
 
     def despawn(self):
+        global score
         self.despawn_timer += 1
         if self.despawn_timer >= 5*fps:
             self.kill()
         if self.health <= 0:
+            score_class.change_score()
+            score += 2 + self.speed
             self.kill()
 
     def collision(self):
+        global score
         # bullets (take damage)
         for bullet in bullets_group:
             if self.rect.colliderect(bullet.rect):
+                score += 1
+                score_class.change_score()
                 bullet.kill()
                 gun_shot_particle_list.append(
                     particles.GunShot((bullet.rect.x, bullet.rect.y), screen))
@@ -277,12 +288,18 @@ class Enemies(pyg.sprite.Sprite):
         # self.flash()
 
 
+# variables
+score = 0
+spawn_rate = 40
+# timers
+enemy_spawn_timer = 0
+score_timer = 0
 # sprites:
 # player
 player = Player()
 player_group = pyg.sprite.GroupSingle()
 player_group.add(player)
-
+# --------------------------------------------------
 bullets_group = pyg.sprite.Group()
 # enemies
 enemies_group = pyg.sprite.Group()
@@ -291,12 +308,15 @@ gun_shot_particle_list = []
 # cursor
 cursor_group = pyg.sprite.GroupSingle()
 cursor_group.add(otherui.Cursor("graphics/ui/cursors/cross.png"))
+# texts
+# score_class = texts.Score(50, score)
+score_class = texts.Score(70)
+score_group = pyg.sprite.GroupSingle()
+score_group.add(score_class)
 # buttons:
 # quit button
 quit_button = buttons.QuitButton(screen)
-# others
-enemy_spawn_timer = 0
-spawn_rate = 40
+
 
 logo()
 
@@ -310,8 +330,16 @@ while True:
         enemies_group.add(Enemies())
         spawn_rate = random.randint(40, 65)
 
+    score_timer += 1
+    if score_timer == fps:
+        score_timer = 0
+        score += 1
+        score_class.change_score()
+
     for event in pyg.event.get():
         if event.type == pyg.QUIT:
+            print(
+                "-------------------------------------------------------------------------------\n")
             pyg.quit()
             exit()
 
@@ -321,6 +349,15 @@ while True:
                     Bullets(player.rect.centerx, player.rect.centery))
             elif event.key == pyg.K_ESCAPE:
                 player.health += 17
+                score -= 30
+            elif event.key == pyg.K_1:
+                cursor_group.empty()
+                cursor_group.add(otherui.Cursor(
+                    "graphics/ui/cursors/cross.png"))
+            elif event.key == pyg.K_2:
+                cursor_group.empty()
+                cursor_group.add(otherui.Cursor(
+                    "graphics/ui/cursors/circle_dot.png"))
 
         if event.type == pyg.MOUSEBUTTONDOWN:
             # quit button
@@ -345,6 +382,9 @@ while True:
 
     player_group.draw(screen)
     player_group.update()
+
+    score_group.draw(screen)
+    score_group.update()
 
     cursor_group.draw(screen)
     cursor_group.update()
