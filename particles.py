@@ -1,6 +1,6 @@
-import math
 import pygame as pyg
 from random import randint, uniform
+from math import cos, sin, radians
 
 
 class GunShot:
@@ -49,8 +49,8 @@ class Score(pyg.sprite.Sprite):
             pyg.event.post(pyg.event.Event(pyg.USEREVENT+1))
 
     def movement(self):
-        self.rect.x += self.speed * math.cos(math.radians(self.dir))
-        self.rect.y += self.speed * math.sin(math.radians(self.dir))
+        self.rect.x += self.speed * cos(radians(self.dir))
+        self.rect.y += self.speed * sin(radians(self.dir))
 
     def animate(self):
         if self.alpha >= 0:
