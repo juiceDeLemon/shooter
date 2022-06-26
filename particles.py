@@ -1,10 +1,11 @@
-import pygame as pyg
-from random import randint, uniform
+import pygame as pg
+from random import randrange, uniform
 from math import cos, sin, radians
+from data.configuration import FPS
 
 
 class GunShot:
-    def __init__(self, pos, screen):
+    def __init__(self, pos: tuple[int], screen: pg.Surface):
         self.pos = pos
         self.max_rad = self.radius = 20
         self.width = 2
@@ -17,48 +18,47 @@ class GunShot:
             self.radius -= self.decay_speed
 
     def draw(self):
-        if self.max_rad >= self.radius >= self.max_rad - self.decay_speed*self.fill_time:
-            pyg.draw.circle(self.screen, "white", self.pos,
-                            self.radius, 0)
+        if self.max_rad >= self.radius >= self.max_rad - self.decay_speed * self.fill_time:
+            pg.draw.circle(
+                self.screen, "white", self.pos, self.radius, 0
+            )
         else:
-            pyg.draw.circle(self.screen, "white", self.pos,
-                            self.radius, self.width)
+            pg.draw.circle(
+                self.screen, "white", self.pos, self.radius, self.width
+            )
 
     def update(self):
         self.change_size()
         self.draw()
 
 
-class Score(pyg.sprite.Sprite):
-    def __init__(self, x, y):
+class Particle1(pg.sprite.Sprite):
+    def __init__(self, x: int, y: int, alpha_decay_speed: int):
         super().__init__()
-        self.image = pyg.image.load(
-            "graphics/particles/score.png").convert_alpha()
-        self.image = pyg.transform.rotozoom(
-            self.image, 0, uniform(1, 1.5))
+        self.image = pg.image.load(
+            "images/particles/particle_1.png").convert_alpha()
+        self.image = pg.transform.rotozoom(
+            self.image, 0, uniform(0.8, 1.5))
         self.rect = self.image.get_rect(
-            center=(randint(0, 20) + x, randint(0, 20) + y))
-        self.dir = randint(-180, 180)
-        self.speed = randint(4, 8)
-        self.alpha = randint(180, 230)
-        self.image.set_alpha(self.alpha)
-
-    def add(self):
-        keys = pyg.key.get_pressed()
-        if keys[pyg.K_SPACE]:
-            pyg.event.post(pyg.event.Event(pyg.USEREVENT+1))
+            center=(randrange(0, 20) + x, randrange(0, 20) + y))
+        self.dir = randrange(-180, 180)
+        self.speed = randrange(4, 8)
+        self.image.set_alpha(randrange(180, 255))
+        self.alpha_decay_speed = alpha_decay_speed
+        self.despawn_timer = 0
 
     def movement(self):
         self.rect.x += self.speed * cos(radians(self.dir))
         self.rect.y += self.speed * sin(radians(self.dir))
 
     def animate(self):
-        if self.alpha >= 0:
-            self.alpha -= 5
-            self.image.set_alpha(self.alpha)
+        alpha = self.image.get_alpha()
+        if alpha > 0:
+            self.image.set_alpha(alpha - self.alpha_decay_speed)
         else:
             self.kill()
 
     def update(self):
         self.movement()
         self.animate()
+        self.despawn_timer += 1

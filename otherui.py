@@ -1,59 +1,53 @@
-import pygame as pyg
+import pygame as pg
 
 
-class Cursor(pyg.sprite.Sprite):
-    def __init__(self, cursor):
+def flash(sprite: pg.sprite.Sprite, duration: int):
+    if not hasattr(sprite, "alpha_frame"):
+        sprite.alpha_frame = 0
+    # alpha_frame is a special type of variable I created.
+    # It's like a for loop but it's not.
+    # Don't know if this has been done.
+    # It is a boolean (0 or 1) and if it is 1 (True), it will be changed to being a counter,
+    # like the i from for i in range(x)
+    # Therefore, the counter reset point will be 1 bigger than the duration.
+    # -------------------------
+    if sprite.alpha_frame:  # "if True"
+        if sprite.alpha_frame == 1:  # "initialise" when alpha_frame is "True"
+            try:  # flash (decrease alpha)
+                sprite.orig_img.set_alpha(50)
+            except AttributeError:
+                sprite.image.set_alpha(50)
+        sprite.alpha_frame += 1  # counting
+        if sprite.alpha_frame == duration + 1:  # max
+            print(
+                f"change_pls {sprite.orig_img.get_alpha()} {sprite.image.get_alpha()}")
+            try:  # reset (max alpha) / ending code
+                sprite.orig_img.set_alpha(255)
+            except AttributeError:
+                sprite.image.set_alpha(255)
+            sprite.alpha_frame = 0  # reset
+    # -------------------------
+
+    # structure for this type of variable:
+    # if variable:
+    #     if variable == 1: # optional
+    #         ...
+    #     variable += 1
+    #     if variable == max_duration + 1:
+    #         ...
+    #         variable = 0
+
+
+class Cursor(pg.sprite.Sprite):
+    def __init__(self, cursor: str):
         super().__init__()
         self.cursor = cursor
-        self.image = pyg.image.load(cursor).convert_alpha()
-        self.rect = self.image.get_rect(center=pyg.mouse.get_pos())
+        self.image = pg.image.load(cursor).convert_alpha()
+        self.mask = pg.mask.from_surface(self.image)
+        self.rect = self.image.get_rect(center=pg.mouse.get_pos())
 
     def update(self):
-        self.rect = self.image.get_rect(topleft=pyg.mouse.get_pos()) \
-            if self.cursor == "graphics/ui/cursors/arrow.png" \
+        self.rect = self.image.get_rect(topleft=pg.mouse.get_pos()) \
+            if self.cursor == "images/ui/cursors/arrow.png" \
             else \
-            self.image.get_rect(center=pyg.mouse.get_pos())
-
-
-class Menu:
-    ...
-
-# class HealthBar():
-#     ani_width = 0
-
-#     # 1 is transition speed
-#     if not self.ani_health == self.health:
-#         if self.ani_health < self.health - 1:
-#             self.ani_health += 1
-#         elif self.ani_health > self.health + 1:
-#             self.ani_health -= 1
-#         else:
-#             self.ani_health = self.health
-#         ani_width = (self.health - self.ani_health) / \
-#             self.max_health_to_health_bar_max_length_ratio
-
-#     # x = 70, y = 25 is the offset from the top left corner of the screen
-#     # 54, settings.WIDTH is the height and the max length of the health bar
-
-#     # background
-#     pyg.draw.rect(screen, bg_colour, pyg.Rect(
-#         70, 25, settings.WIDTH/3, 54))
-
-#     # bar rect
-#     bar_rect = pyg.Rect(
-#         70, 25, int(self.ani_health / self.max_health_to_health_bar_max_length_ratio), 54)
-#     # animation bar
-#     ani_bar_rect = pyg.Rect(bar_rect.right, 70, ani_width, 54)
-#     pyg.draw.rect(screen, "#646464", ani_bar_rect)
-#     # bar
-#     pyg.draw.rect(screen, "#dddddd", bar_rect, 0, 12)
-#     # bar shade
-#     # 25+54-20 = offset + (height - shade height)
-#     pyg.draw.rect(screen, "#afafaf", pyg.Rect(
-#         70, 25+54-20, self.health / self.max_health_to_health_bar_max_length_ratio, 20),
-#         0, border_bottom_left_radius=12, border_bottom_right_radius=12)
-#     # frame
-#     pyg.draw.rect(screen, "#ffffff", pyg.Rect(
-#         70, 25, settings.WIDTH/3, 54), 5, border_top_right_radius=12, border_bottom_right_radius=12)
-#     # heart
-#     screen.blit(self.heart_img, self.heart_rect)
+            self.image.get_rect(center=pg.mouse.get_pos())

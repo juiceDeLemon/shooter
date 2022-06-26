@@ -5,6 +5,6 @@
 *test_4.py
 *test_5.py
 *.DS_Store
-*settings.cpython-310.pyc
+*config.cpython-310.pyc
 /.vscode/*
 /__pycache__/*
